@@ -4,7 +4,10 @@ Fine-tunes Qwen3.5-9B-Base on a corpus of ~324k open-access optical-microscopy p
 
 ## Setup
 
-    pip install -e .
+    mamba env create -f environment.yml
+    mamba activate finetune
+
+Non-mamba users: pip install -e .
 
 ## Usage
 
@@ -20,3 +23,24 @@ Fine-tunes Qwen3.5-9B-Base on a corpus of ~324k open-access optical-microscopy p
     src/      the finetune package (data, train, eval)
     scripts/  thin CLI wrappers
     tests/    tests
+
+## Tested on
+
+| Component | Value |
+|---|---|
+| CPU | AMD Ryzen Threadripper 7970X (32 cores, 64 threads) |
+| GPU | NVIDIA RTX PRO 6000 Blackwell Workstation Edition, 96 GB (97887 MiB) |
+| RAM | 123 GiB |
+| OS | Ubuntu 24.04.4 LTS |
+| Driver | 595.71.05 |
+| CUDA | 13.2 |
+
+Reproduced by environment.yml (`mamba env create -f environment.yml`). Package versions:
+
+    python 3.12.13
+    torch 2.8.0+cu128
+    transformers 5.5.0
+    trl 0.24.0
+    datasets 4.3.0
+    accelerate 1.14.0
+    bitsandbytes 0.49.2

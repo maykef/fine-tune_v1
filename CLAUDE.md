@@ -17,5 +17,5 @@
 ## Documentation style
 - README and docstrings: plain, factual, terse. Describe what things do and how to run them. Nothing else.
 - Banned: marketing language, adjectives about the code ("robust", "powerful", "honest", "load-bearing", "battle-tested"), emoji, badges, "Why this project?" sections, roadmaps, contribution guides, licences not asked for.
-- README sections are limited to: what it is, setup, usage, structure. Never add others.
+- README sections are limited to: what it is, setup, usage, structure, tested on. Never add others.
 - Do not write summaries of your work into the repo (no CHANGES.md, SUMMARY.md, NOTES.md).

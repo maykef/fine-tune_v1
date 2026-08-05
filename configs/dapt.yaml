@@ -13,8 +13,7 @@ data:
 
 train:
   epochs: 1
-  learning_rate: 1.0e-5
-  max_learning_rate: 2.0e-5
+  learning_rate: 2.0e-5
   lr_scheduler: cosine
   warmup_ratio: 0.02
   per_device_batch_size: 1
