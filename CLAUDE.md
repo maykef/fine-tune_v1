@@ -7,6 +7,7 @@
 - One script per task. If a script needs a variant, add a CLI flag; do not create `train_v2.py`, `train_final.py`, `train_fixed.py`, etc.
 - All hyperparameters and paths go in `configs/*.yaml` (one per stage), never hardcoded.
 - Do not create "experiment", "utils2", "helpers", "misc", "temp" or "old" files or folders. Delete dead code instead of keeping copies.
+- The teacher pipeline (src/finetune/teacher, configs/teacher.yaml, scripts/run_teacher.py) is the only sanctioned way to produce SFT pairs. Never generate training data ad hoc.
 
 ## Workflow
 - Prefer editing existing files over creating new ones. Creating a file is the exception and needs a stated reason.

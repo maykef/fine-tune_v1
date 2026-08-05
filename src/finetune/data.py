@@ -20,7 +20,7 @@ def load_dapt_corpus(config: dict[str, Any]) -> Dataset:
 
 
 def load_sft_pairs(config: dict[str, Any]) -> Dataset:
-    """Load the grounded QA chat JSONL for SFT."""
+    """Load the grounded QA chat JSONL produced by the teacher pipeline (the SFT train_file)."""
     raise NotImplementedError
 
 

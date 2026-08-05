@@ -1,0 +1,37 @@
+# Teacher-generation: grounded synthetic QA for the SFT stage.
+# Six resumable stages (select, sections, generate, guard, judge, export).
+# The guard and judge stages are the anti-fabrication core (src/finetune/teacher).
+
+paths:
+  store: /mnt/tank/PMC_Open_Access_Subset                         # tank root (source of truth)
+  source_db: /mnt/tank/PMC_Open_Access_Subset/pmc_oa.db           # corpus DB, opened read-only
+  state_db: /mnt/tank/PMC_Open_Access_Subset/sft/teacher.db       # this pipeline's own state
+  export_file: /mnt/tank/PMC_Open_Access_Subset/sft/export/teacher_sft.jsonl  # == data.train_file in configs/sft.yaml
+
+model:
+  base_url: http://localhost:8000/v1   # vLLM OpenAI-compatible endpoint (generate + judge)
+  name: qwen3.5-122b                    # served model name
+
+select:
+  n: 92000            # over-select (~87% section yield nets ~80k usable papers)
+  seed: 0             # deterministic stratified sample
+
+sections:
+  workers: 16         # process-pool workers for the JATS re-parse
+  abstract_chars: 1600  # context budget (chars ≈ 4× tokens)
+  methods_chars: 7000
+  results_chars: 7000
+
+generate:
+  pairs_per_paper: 6    # QA pairs requested per paper
+  temperature: 0.7      # sampling temperature for generation
+  max_tokens: 3200      # = 500 tok/pair × 6 + 200 headroom (dense pairs overran 2000)
+  chunk: 400            # papers per commit (resume granularity)
+
+judge:
+  temperature: 0.0      # deterministic adversarial fact-check
+  max_tokens: 340       # = 40 tok/pair × 6 + 100 headroom
+  chunk: 400
+
+export:
+  require_judge: true   # export only guard-passed AND judge-supported pairs
