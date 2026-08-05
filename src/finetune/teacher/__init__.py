@@ -21,6 +21,7 @@ from .pipeline import (
     stage_judge,
     stage_sections,
     stage_select,
+    stage_stats,
 )
 
 __all__ = [
@@ -28,5 +29,5 @@ __all__ = [
     "span_grounded", "numbers_grounded", "check_pair", "select_types",
     "gen_prompt", "judge_prompt",
     "stage_select", "stage_sections", "stage_generate",
-    "stage_guard", "stage_judge", "stage_export",
+    "stage_guard", "stage_judge", "stage_export", "stage_stats",
 ]

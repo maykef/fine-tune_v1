@@ -13,7 +13,7 @@ def main() -> None:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "--stage",
-        choices=["select", "sections", "generate", "guard", "judge", "export", "all"],
+        choices=["select", "sections", "generate", "guard", "judge", "export", "all", "stats"],
         required=True)
     parser.add_argument("--config", required=True, help="Path to the teacher YAML config.")
     # Path / endpoint overrides — each replaces the matching config value when given.
@@ -24,6 +24,8 @@ def main() -> None:
     parser.add_argument("--base-url", dest="base_url", help="Model endpoint base URL.")
     parser.add_argument("--model", help="Served model name.")
     parser.add_argument("--concurrency", type=int, help="Max in-flight requests to the model.")
+    parser.add_argument("--limit", type=int,
+                        help="Process at most N papers this run (for incremental batches; select is unaffected).")
     args = parser.parse_args()
     run(args.stage, args.config, overrides=vars(args))
 

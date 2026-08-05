@@ -31,7 +31,20 @@ mkdir -p "$SFT"
 RT=("$PY" "$ROOT/scripts/run_teacher.py" --config "$CFG")
 
 log(){ echo "[run_daily $(date '+%F %H:%M:%S')] $*"; }
-health(){ curl -s "$BASE_URL/models" 2>/dev/null | grep -q "$MODEL"; }
+# health: exit 0 if $MODEL appears in $BASE_URL/models, else non-zero (connection
+# failure = unhealthy). stdlib urllib via $PY — no curl dependency.
+health(){ "$PY" - "$BASE_URL" "$MODEL" <<'PY'
+import sys, urllib.request
+base, model = sys.argv[1], sys.argv[2]
+try:
+    with urllib.request.urlopen(base + "/models", timeout=10) as r:
+        body = r.read().decode()
+    ok = model in body
+except Exception:
+    ok = False
+sys.exit(0 if ok else 1)
+PY
+}
 
 # echoes: SEL CTX GEN KEPT JUDGED  (all 0 if the db doesn't exist yet)
 state(){ STATE_DB="$STATE_DB" "$PY" - <<'PY'

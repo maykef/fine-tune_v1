@@ -98,6 +98,7 @@ class Config:
     judge_max_tokens: int
     judge_chunk: int
     export_require_judge: bool
+    limit: int | None = None
 
 
 # CLI-overridable fields: key in the `overrides` mapping -> Config field it replaces.
@@ -109,6 +110,7 @@ _OVERRIDES = {
     "base_url": "model_base_url",
     "model": "model_name",
     "concurrency": "model_concurrency",
+    "limit": "limit",
 }
 
 
@@ -385,6 +387,8 @@ def stage_sections(cfg: Config):
     sft_dir = Path(cfg.state_db).parent
     have = {r[0] for r in conn.execute("SELECT pmcid FROM paper_ctx")}
     want = [r[0] for r in conn.execute("SELECT pmcid FROM sft_paper") if r[0] not in have]
+    if cfg.limit:
+        want = want[:cfg.limit]
     ro = _pmc_ro(cfg)
     paths = dict(ro.execute(
         "SELECT pmcid, local_path FROM candidates WHERE fetch_state='fetched'"))
@@ -419,6 +423,8 @@ def stage_generate(cfg: Config):
     facets = dict(conn.execute("SELECT pmcid, facets FROM sft_paper"))
     todo = [(p, c) for p, c in conn.execute("SELECT pmcid, context FROM paper_ctx")
             if p not in done]
+    if cfg.limit:
+        todo = todo[:cfg.limit]
     qwen = QwenClient(base_url=cfg.model_base_url, model=cfg.model_name,
                       max_concurrency=cfg.model_concurrency,
                       enable_thinking=False, temperature=cfg.gen_temperature)
@@ -476,6 +482,8 @@ def stage_guard(cfg: Config):
     already = {r[0] for r in conn.execute("SELECT DISTINCT pmcid FROM pair")}
     rows = [(p, j) for p, j in conn.execute("SELECT pmcid, pairs_json FROM gen WHERE ok=1")
             if p not in already]
+    if cfg.limit:
+        rows = rows[:cfg.limit]
     print(f"[guard] checking {len(rows):,} papers ({len(already):,} already guarded)", flush=True)
     bar = Bar("guard", len(rows) or 1, sft_dir / "progress_guard.json")
     kept = dropped = n = 0
@@ -523,6 +531,8 @@ def stage_judge(cfg: Config):
             "SELECT id, pmcid, question, answer FROM pair WHERE kept=1 AND judged=-1"):
         bypaper.setdefault(pmcid, []).append({"id": pid, "question": q, "answer": a})
     papers = list(bypaper.items())
+    if cfg.limit:
+        papers = papers[:cfg.limit]
     qwen = QwenClient(base_url=cfg.model_base_url, model=cfg.model_name,
                       max_concurrency=cfg.model_concurrency,
                       enable_thinking=False, temperature=cfg.judge_temperature)
@@ -590,6 +600,32 @@ def stage_export(cfg: Config):
     print(f"[export] wrote {n:,} SFT pairs -> {out} (require_judge={cfg.export_require_judge})")
 
 
+# ── stats ─────────────────────────────────────────────────────────────────────
+def stage_stats(cfg: Config):
+    conn = connect(cfg)
+
+    def q(sql):
+        return conn.execute(sql).fetchone()[0]
+
+    print("── teacher-generation status ──")
+    print(f"  selected papers : {q('SELECT COUNT(*) FROM sft_paper'):,}")
+    print(f"  contexts parsed : {q('SELECT COUNT(*) FROM paper_ctx'):,}")
+    print(f"  generated (ok)  : {q('SELECT COUNT(*) FROM gen WHERE ok=1'):,}  "
+          f"(fail {q('SELECT COUNT(*) FROM gen WHERE ok=0'):,})")
+    tot = q("SELECT COUNT(*) FROM pair")
+    if tot:
+        print(f"  pairs total     : {tot:,}")
+        print(f"  guard kept      : {q('SELECT COUNT(*) FROM pair WHERE kept=1'):,} "
+              f"({100*q('SELECT COUNT(*) FROM pair WHERE kept=1')/tot:.1f}%)")
+        print(f"  judge supported : {q('SELECT COUNT(*) FROM pair WHERE kept=1 AND judged=1'):,} "
+              f"(unjudged {q('SELECT COUNT(*) FROM pair WHERE kept=1 AND judged=-1'):,})")
+        print("  drop reasons    :", dict(conn.execute(
+            "SELECT COALESCE(reason,''), COUNT(*) FROM pair WHERE kept=0 GROUP BY reason "
+            "ORDER BY 2 DESC LIMIT 8").fetchall()))
+        print("  kept by type    :", dict(conn.execute(
+            "SELECT type, COUNT(*) FROM pair WHERE kept=1 GROUP BY type ORDER BY 2 DESC").fetchall()))
+
+
 # ── driver ──────────────────────────────────────────────────────────────────
 STAGES = ("select", "sections", "generate", "guard", "judge", "export")
 
@@ -600,6 +636,7 @@ _DISPATCH = {
     "guard": stage_guard,
     "judge": stage_judge,
     "export": stage_export,
+    "stats": stage_stats,
 }
 
 

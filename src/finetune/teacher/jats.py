@@ -3,7 +3,9 @@
 Only the pieces the teacher pipeline needs: article-title / abstract / body
 extraction and tag-stripping. Regex (fast, matches the corpus tooling's style).
 NOTE: this module's `_WS` collapses horizontal whitespace only ([ \\t\\r\\f\\v]+);
-the guard normaliser in `pipeline._norm` uses a different, full-\\s+ collapse.
+the guard normaliser in `pipeline._norm` uses a different, full-\\s+ collapse. The
+two must not be unified: the guard's grounding behaviour is validated against
+`pipeline._norm` specifically, so changing either regex could silently break it.
 """
 from __future__ import annotations
 
