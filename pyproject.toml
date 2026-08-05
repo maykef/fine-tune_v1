@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finetune"
+version = "0.0.0"
+description = "Fine-tunes Qwen3.5-9B-Base on a microscopy corpus using Transformers + TRL."
+requires-python = ">=3.10"
+dependencies = [
+    "transformers",
+    "trl",
+    "datasets",
+    "accelerate",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

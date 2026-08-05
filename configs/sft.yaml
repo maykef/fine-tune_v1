@@ -1,0 +1,25 @@
+# Supervised fine-tuning (SFT).
+# Trains the DAPT checkpoint on grounded synthetic QA pairs (teacher-gen export).
+
+model:
+  name: checkpoints/dapt           # base = DAPT output
+  cache_dir: /mnt/nvme8tb/huggingface_cache
+
+data:
+  train_file: /mnt/tank/PMC_Open_Access_Subset/sft/export/teacher_sft.jsonl
+  processed_dir: data/processed/sft
+  instruction_replay_fraction: 0.10
+  sequence_length: 4096
+
+train:
+  epochs: 3
+  learning_rate: 1.0e-5
+  lr_scheduler: cosine
+  warmup_ratio: 0.02
+  per_device_batch_size: 1
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true
+  precision: bf16
+
+output:
+  dir: checkpoints/sft

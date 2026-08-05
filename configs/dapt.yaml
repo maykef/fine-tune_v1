@@ -1,0 +1,27 @@
+# Domain-adaptive pretraining (DAPT).
+# Continued pretraining of the base model on the microscopy corpus plus a replay mix.
+
+model:
+  name: Qwen/Qwen3.5-9B-Base        # pilot: Qwen/Qwen3.5-4B-Base
+  cache_dir: /mnt/nvme8tb/huggingface_cache
+
+data:
+  corpus_dir: /mnt/tank/PMC_Open_Access_Subset/dapt/shards   # packed token shards
+  processed_dir: data/processed/dapt
+  replay_fraction: 0.15            # replay mix interleaved at a stationary ratio
+  sequence_length: 4096
+
+train:
+  epochs: 1
+  learning_rate: 1.0e-5
+  max_learning_rate: 2.0e-5
+  lr_scheduler: cosine
+  warmup_ratio: 0.02
+  per_device_batch_size: 1
+  gradient_accumulation_steps: 32
+  gradient_checkpointing: true
+  precision: bf16                  # fp8 once Transformer Engine is verified on Blackwell
+  optimizer: adamw_8bit
+
+output:
+  dir: checkpoints/dapt
