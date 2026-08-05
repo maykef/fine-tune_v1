@@ -83,6 +83,7 @@ class Config:
     export_file: str
     model_base_url: str
     model_name: str
+    model_concurrency: int
     select_n: int
     select_seed: int
     sections_workers: int
@@ -99,18 +100,31 @@ class Config:
     export_require_judge: bool
 
 
-def load_config(config_path: str | Path) -> Config:
-    """Load configs/teacher.yaml into a Config."""
+# CLI-overridable fields: key in the `overrides` mapping -> Config field it replaces.
+_OVERRIDES = {
+    "store": "store",
+    "source_db": "source_db",
+    "state_db": "state_db",
+    "export_file": "export_file",
+    "base_url": "model_base_url",
+    "model": "model_name",
+    "concurrency": "model_concurrency",
+}
+
+
+def load_config(config_path: str | Path, overrides: dict | None = None) -> Config:
+    """Load configs/teacher.yaml into a Config. Any key in `overrides` (e.g. parsed
+    from CLI flags) whose value is not None replaces the corresponding config value."""
     import yaml
     with open(config_path) as fh:
         raw = yaml.safe_load(fh)
     p, m = raw["paths"], raw["model"]
     sel, sec = raw["select"], raw["sections"]
     gen, jdg, exp = raw["generate"], raw["judge"], raw["export"]
-    return Config(
+    cfg = Config(
         store=p["store"], source_db=p["source_db"], state_db=p["state_db"],
         export_file=p["export_file"],
-        model_base_url=m["base_url"], model_name=m["name"],
+        model_base_url=m["base_url"], model_name=m["name"], model_concurrency=m["concurrency"],
         select_n=sel["n"], select_seed=sel["seed"],
         sections_workers=sec["workers"], abstract_chars=sec["abstract_chars"],
         methods_chars=sec["methods_chars"], results_chars=sec["results_chars"],
@@ -120,6 +134,10 @@ def load_config(config_path: str | Path) -> Config:
         judge_chunk=jdg["chunk"],
         export_require_judge=exp["require_judge"],
     )
+    for key, field in _OVERRIDES.items():
+        if overrides and overrides.get(key) is not None:
+            setattr(cfg, field, overrides[key])
+    return cfg
 
 
 # ── selection: which QA types a paper's facet set supports ────────────────────
@@ -402,6 +420,7 @@ def stage_generate(cfg: Config):
     todo = [(p, c) for p, c in conn.execute("SELECT pmcid, context FROM paper_ctx")
             if p not in done]
     qwen = QwenClient(base_url=cfg.model_base_url, model=cfg.model_name,
+                      max_concurrency=cfg.model_concurrency,
                       enable_thinking=False, temperature=cfg.gen_temperature)
     if not qwen.health():
         sys.exit(f"[generate] vLLM not serving {cfg.model_name} at {cfg.model_base_url} — start it first.")
@@ -505,6 +524,7 @@ def stage_judge(cfg: Config):
         bypaper.setdefault(pmcid, []).append({"id": pid, "question": q, "answer": a})
     papers = list(bypaper.items())
     qwen = QwenClient(base_url=cfg.model_base_url, model=cfg.model_name,
+                      max_concurrency=cfg.model_concurrency,
                       enable_thinking=False, temperature=cfg.judge_temperature)
     if not qwen.health():
         sys.exit(f"[judge] vLLM not serving {cfg.model_name} at {cfg.model_base_url} — start it first.")
@@ -583,8 +603,11 @@ _DISPATCH = {
 }
 
 
-def run(stage: str, config_path: str | Path):
-    """Run one stage, or the whole pipeline in order when stage == 'all'."""
-    cfg = load_config(config_path)
+def run(stage: str, config_path: str | Path, overrides: dict | None = None):
+    """Run one stage, or the whole pipeline in order when stage == 'all'.
+
+    `overrides` (typically vars(argparse-namespace)) lets CLI flags replace
+    individual config values; see _OVERRIDES for the overridable keys."""
+    cfg = load_config(config_path, overrides)
     for s in (STAGES if stage == "all" else (stage,)):
         _DISPATCH[s](cfg)

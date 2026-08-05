@@ -7,7 +7,7 @@
 #
 #   ./scripts/run_daily.sh              # 4h GPU window
 #   HOURS=6 ./scripts/run_daily.sh      # longer window (weekends)
-#   (cron)  0 9 * * *  cd /mnt/nvme8tb/fine-tune_v1 && ./scripts/run_daily.sh >> <sft>/daily.log 2>&1
+#   (cron)  0 9 * * *  cd <repo> && ./scripts/run_daily.sh >> <sft>/daily.log 2>&1
 #
 # Order: select→sections (CPU, once) → generate (4h/day) → guard (CPU, once) →
 #        judge (4h/day) → export. At most ONE ${HOURS}h GPU block runs per invocation.

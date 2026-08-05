@@ -1,12 +1,13 @@
-# Supervised fine-tuning (SFT).
-# Trains the DAPT checkpoint on grounded synthetic QA pairs (teacher-gen export).
+# Example config — copy to configs/sft.yaml and set your paths.
+# The real configs/sft.yaml is gitignored (it holds machine-specific paths).
+# Supervised fine-tuning (SFT) on the grounded QA pairs from the teacher pipeline.
 
 model:
   name: checkpoints/dapt           # base = DAPT output
-  cache_dir: /mnt/nvme8tb/huggingface_cache
+  cache_dir: /path/to/huggingface_cache
 
 data:
-  train_file: /mnt/tank/PMC_Open_Access_Subset/sft/export/teacher_sft.jsonl
+  train_file: /path/to/sft/export/teacher_sft.jsonl  # MUST equal paths.export_file in configs/teacher.yaml
   processed_dir: data/processed/sft
   instruction_replay_fraction: 0.10
   sequence_length: 4096

@@ -3,10 +3,9 @@
 Everything token-heavy in the teacher pipeline goes through THIS module — grounded
 QA generation and the adversarial judge pass. Nothing else talks to the model directly.
 
-The model is an OpenAI-compatible vLLM endpoint on localhost:
-  * base_url            http://localhost:8000/v1
-  * served model name   qwen3.5-122b
-  * concurrency ceiling MAX_NUM_SEQS=8  -> we cap client concurrency to match; more
+The model is an OpenAI-compatible vLLM endpoint; the base_url and served model name
+are supplied by the caller from configs/teacher.yaml (nothing here is hardcoded):
+  * concurrency ceiling MAX_NUM_SEQS  -> we cap client concurrency to match; more
                         in-flight requests just queue server-side and add latency.
   * reasoning model     -> chat_template_kwargs.enable_thinking=false, temperature 0
                         for deterministic, verbatim output (thinking ON makes it
@@ -36,9 +35,7 @@ from concurrent.futures import as_completed as _as_completed
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
-# ── Defaults (overridable via constructor / config.yaml) ──────────────────────
-DEFAULT_BASE_URL = "http://localhost:8000/v1"
-DEFAULT_MODEL = "qwen3.5-122b"
+# ── Tuning defaults (endpoint + model are required, supplied from config) ─────
 DEFAULT_MAX_CONCURRENCY = 32          # == vLLM MAX_NUM_SEQS on this box
 DEFAULT_TIMEOUT = 300.0
 DEFAULT_MAX_RETRIES = 5
@@ -80,8 +77,8 @@ class QwenClient:
 
     def __init__(
         self,
-        base_url: str = DEFAULT_BASE_URL,
-        model: str = DEFAULT_MODEL,
+        base_url: str,
+        model: str,
         max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,

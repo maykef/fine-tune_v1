@@ -6,11 +6,7 @@ Fine-tunes Qwen3.5-9B-Base on a corpus of ~324k open-access optical-microscopy p
 
     mamba env create -f environment.yml
     mamba activate finetune
-
-Non-mamba users: install the matching torch wheel first, then the package:
-
-    pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
-    pip install -e .
+    cp configs/teacher.example.yaml configs/teacher.yaml   # then set your paths (same for dapt, sft)
 
 ## Usage
 

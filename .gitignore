@@ -24,3 +24,10 @@ wandb/
 
 # Claude Code local settings
 .claude/
+
+# Local-only docs (not tracked)
+HOW_TO_USE.md
+
+# Environment-specific configs (real paths); commit only the *.example.yaml templates
+configs/*.yaml
+!configs/*.example.yaml

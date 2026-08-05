@@ -1,12 +1,13 @@
+# Example config — copy to configs/dapt.yaml and set your paths.
+# The real configs/dapt.yaml is gitignored (it holds machine-specific paths).
 # Domain-adaptive pretraining (DAPT).
-# Continued pretraining of the base model on the microscopy corpus plus a replay mix.
 
 model:
   name: Qwen/Qwen3.5-9B-Base        # pilot: Qwen/Qwen3.5-4B-Base
-  cache_dir: /mnt/nvme8tb/huggingface_cache
+  cache_dir: /path/to/huggingface_cache
 
 data:
-  corpus_dir: /mnt/tank/PMC_Open_Access_Subset/dapt/shards   # packed token shards
+  corpus_dir: /path/to/dapt/shards   # packed token shards
   processed_dir: data/processed/dapt
   replay_fraction: 0.15            # replay mix interleaved at a stationary ratio
   sequence_length: 4096
