@@ -72,3 +72,4 @@ Reproduced by environment.yml (`mamba env create -f environment.yml`). Package v
     datasets 4.3.0
     accelerate 1.14.0
     bitsandbytes 0.49.2
+    flash-linear-attention 0.5.2
