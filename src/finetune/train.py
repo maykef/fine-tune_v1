@@ -14,8 +14,10 @@ from pathlib import Path
 from typing import Any
 
 from finetune.data import (
+    _load_causal_lm,
     _load_tokenizer,
     _packed_domain,
+    _verify_resume,
     load_dapt_corpus,
     load_sft_pairs,
 )
@@ -46,14 +48,8 @@ def train(stage: str, config_path: str | Path) -> Path:
 
 def run_dapt(config: dict[str, Any]) -> Path:
     """Full-parameter continued pretraining with replay interleaving."""
-    import torch
     import transformers
-    from transformers import (
-        AutoModelForCausalLM,
-        Trainer,
-        TrainingArguments,
-        default_data_collator,
-    )
+    from transformers import Trainer, TrainingArguments, default_data_collator
 
     train_cfg, data_cfg = config["train"], config["data"]
     seed = int(train_cfg.get("seed", 0))
@@ -77,11 +73,12 @@ def run_dapt(config: dict[str, Any]) -> Path:
     max_steps = int(train_cfg["max_steps"]) if train_cfg.get("max_steps") else total_steps
 
     output_dir = Path(config["output"]["dir"])
-    model = AutoModelForCausalLM.from_pretrained(
-        config["model"]["name"],
-        cache_dir=config["model"].get("cache_dir"),
-        dtype=torch.bfloat16,
-    )
+    resume = _last_checkpoint(output_dir)
+    # On resume, load from the checkpoint so trained weights are restored via
+    # from_pretrained's key remapping (Trainer's later raw load is then a no-op).
+    model = _load_causal_lm(resume or config["model"]["name"], config)
+    if resume:
+        _verify_resume(model, resume)
     model.config.use_cache = False
 
     args = TrainingArguments(
@@ -108,7 +105,7 @@ def run_dapt(config: dict[str, Any]) -> Path:
         data_collator=default_data_collator,
         processing_class=tokenizer,
     )
-    trainer.train(resume_from_checkpoint=_last_checkpoint(output_dir))
+    trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
     tokenizer.save_pretrained(str(output_dir))
     return output_dir
@@ -116,7 +113,6 @@ def run_dapt(config: dict[str, Any]) -> Path:
 
 def run_sft(config: dict[str, Any]) -> Path:
     """Supervised fine-tuning on grounded QA pairs via TRL SFTTrainer."""
-    import torch
     import transformers
     from trl import SFTConfig, SFTTrainer
 
@@ -129,6 +125,11 @@ def run_sft(config: dict[str, Any]) -> Path:
     eval_ds = splits["validation"] if splits["validation"].num_rows else None
 
     output_dir = Path(config["output"]["dir"])
+    resume = _last_checkpoint(output_dir)
+    tokenizer = _load_tokenizer(config)
+    model = _load_causal_lm(resume or config["model"]["name"], config)
+    if resume:
+        _verify_resume(model, resume)
     max_steps = int(train_cfg["max_steps"]) if train_cfg.get("max_steps") else -1
     args = SFTConfig(
         output_dir=str(output_dir),
@@ -152,18 +153,15 @@ def run_sft(config: dict[str, Any]) -> Path:
         per_device_eval_batch_size=int(train_cfg.get("per_device_batch_size", 1)),
         seed=seed,
         report_to=[],
-        model_init_kwargs={
-            "dtype": torch.bfloat16,
-            "cache_dir": config["model"].get("cache_dir"),
-        },
     )
     trainer = SFTTrainer(
-        model=config["model"]["name"],
+        model=model,
         args=args,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
+        processing_class=tokenizer,
     )
-    trainer.train(resume_from_checkpoint=_last_checkpoint(output_dir))
+    trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(str(output_dir))
     return output_dir
 

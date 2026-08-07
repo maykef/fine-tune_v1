@@ -12,4 +12,5 @@ dependencies:
       - datasets==4.3.0
       - accelerate==1.14.0
       - bitsandbytes==0.49.2
+      - flash-linear-attention==0.5.2   # fused kernels for the Qwen3.5 linear-attention path (~3x train speed)
       - -e .

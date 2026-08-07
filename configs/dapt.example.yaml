@@ -4,7 +4,7 @@
 
 model:
   name: Qwen/Qwen3.5-9B-Base        # pilot: Qwen/Qwen3.5-4B-Base
-  cache_dir: /path/to/huggingface_cache
+  cache_dir: /path/to/huggingface_cache/hub   # HF hub cache root (the dir holding models--*)
 
 data:
   corpus_dir: /path/to/dapt/shards   # dir of *.jsonl(.gz) shards, one doc/line

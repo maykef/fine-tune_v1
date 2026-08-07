@@ -14,7 +14,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from finetune.data import _load_tokenizer, load_config
+from finetune.data import _load_causal_lm, _load_tokenizer, load_config
 
 
 def _resolve_checkpoint(config: dict[str, Any]) -> str:
@@ -32,11 +32,8 @@ def _resolve_checkpoint(config: dict[str, Any]) -> str:
 
 def _load_model(config: dict[str, Any], checkpoint: str):
     import torch
-    from transformers import AutoModelForCausalLM
 
-    model = AutoModelForCausalLM.from_pretrained(
-        checkpoint, cache_dir=config["model"].get("cache_dir"), dtype=torch.bfloat16
-    )
+    model = _load_causal_lm(checkpoint, config)
     model.eval()
     if torch.cuda.is_available():
         model.to("cuda")

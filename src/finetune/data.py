@@ -65,6 +65,63 @@ def _load_tokenizer(config: dict[str, Any]):
     return tok
 
 
+def _load_causal_lm(source: str, config: dict[str, Any], dtype: Any = None):
+    """Load the text CausalLM backbone of the (multimodal) base model.
+
+    Qwen3.5-9B-Base is a vision-language model; DAPT/SFT train only its text
+    backbone, so we load via the text sub-config to get a flat Qwen3_5ForCausalLM.
+    `source` is the base model name or a checkpoint dir. Passing a checkpoint dir
+    here (used when resuming) reloads the trained weights through from_pretrained,
+    which applies the key remapping the raw Trainer resume-load cannot — so the
+    weights are correct before Trainer's resume load runs as a no-op over them.
+    """
+    import torch
+    from transformers import AutoConfig, AutoModelForCausalLM
+
+    cache_dir = config["model"].get("cache_dir")
+    text_cfg = AutoConfig.from_pretrained(source, cache_dir=cache_dir).get_text_config()
+    return AutoModelForCausalLM.from_pretrained(
+        source,
+        config=text_cfg,
+        cache_dir=cache_dir,
+        dtype=torch.bfloat16 if dtype is None else dtype,
+    )
+
+
+def _verify_resume(model, checkpoint: str) -> None:
+    """Confirm a resumed model actually holds the checkpoint's weights.
+
+    from_pretrained remaps keys, so a silent fallback to base weights would still
+    load cleanly but be wrong. Compare one tensor shared between the loaded model
+    and the checkpoint shards; raise if it does not match so a bad resume fails
+    loudly instead of wasting a run.
+    """
+    import glob
+
+    import torch
+    from safetensors import safe_open
+
+    state = model.state_dict()
+    for shard in sorted(glob.glob(f"{checkpoint}/*.safetensors")):
+        with safe_open(shard, "pt") as handle:
+            # Undo the save-time key nesting (model.language_model.* -> model.*).
+            shared = [k for k in handle.keys() if k.replace("model.language_model.", "model.") in state]
+            if not shared:
+                continue
+            # Prefer a substantive trained weight so the check would catch a
+            # silent revert to base, not just an unchanged tied tensor.
+            key = next((k for k in shared if "mlp.down_proj.weight" in k), shared[0])
+            ref = handle.get_tensor(key)
+            mkey = key.replace("model.language_model.", "model.")
+            if not torch.equal(state[mkey].cpu().to(ref.dtype), ref):
+                raise RuntimeError(
+                    f"resume weight check failed for {mkey!r}: loaded model does "
+                    f"not match {checkpoint} — weights were not restored"
+                )
+            return
+    raise RuntimeError(f"resume weight check: no comparable tensor found under {checkpoint}")
+
+
 def _tokenize(dataset, tokenizer, text_field: str):
     """Map raw-text rows to a single `input_ids` column, one EOS per document."""
     eos = tokenizer.eos_token_id

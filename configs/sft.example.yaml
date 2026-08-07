@@ -4,7 +4,7 @@
 
 model:
   name: checkpoints/dapt           # base = DAPT output
-  cache_dir: /path/to/huggingface_cache
+  cache_dir: /path/to/huggingface_cache/hub   # HF hub cache root (the dir holding models--*)
 
 data:
   train_file: /path/to/sft/export/teacher_sft.jsonl  # MUST equal paths.export_file in configs/teacher.yaml
