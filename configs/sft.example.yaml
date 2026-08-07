@@ -9,10 +9,14 @@ model:
 data:
   train_file: /path/to/sft/export/teacher_sft.jsonl  # MUST equal paths.export_file in configs/teacher.yaml
   processed_dir: data/processed/sft
+  val_fraction: 0.02               # held-out validation split (by record; export has no provenance)
   instruction_replay_fraction: 0.10
+  instruction_replay_dir: null     # general instruction data: HF hub id or local chat JSONL (null = off)
+  instruction_replay_name: null    # HF config name (omit for a local instruction_replay_dir)
   sequence_length: 4096
 
 train:
+  seed: 0
   epochs: 3
   learning_rate: 1.0e-5
   lr_scheduler: cosine
@@ -21,6 +25,14 @@ train:
   gradient_accumulation_steps: 16
   gradient_checkpointing: true
   precision: bf16
+  optimizer: adamw_8bit
+  logging_steps: 10
+  save_steps: 500
+  max_steps: null                  # cap training steps (null = full epochs); set ~20 for smoke runs
 
 output:
   dir: checkpoints/sft
+
+eval:
+  num_qa_samples: 200              # validation questions greedily answered for the QA probe
+  max_new_tokens: 256

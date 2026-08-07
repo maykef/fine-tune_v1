@@ -1,6 +1,6 @@
 # microscopy-finetune
 
-Fine-tunes Qwen3.5-9B-Base on ~324k open-access optical-microscopy papers (~3.4B tokens) using Transformers + TRL. Two training stages: domain-adaptive pretraining (DAPT), then supervised fine-tuning (SFT) on grounded QA pairs. The SFT pairs are produced in-repo by a teacher pipeline: a teacher model reads each paper and writes QA pairs, and any pair whose supporting span or numbers are not verbatim in the source is dropped, so fabricated facts do not reach the student.
+Fine-tunes Qwen3.5-9B-Base on ~324k open-access optical-microscopy papers (~3.4B tokens) using Transformers + TRL. Two training stages: domain-adaptive pretraining (DAPT) on the corpus interleaved with a general-text replay set (FineWeb-Edu) to limit forgetting, then supervised fine-tuning (SFT) on grounded QA pairs. The SFT pairs are produced in-repo by a teacher pipeline: a teacher model reads each paper and writes QA pairs, and any pair whose supporting span or numbers are not verbatim in the source is dropped, so fabricated facts do not reach the student.
 
 ## Setup
 

@@ -7,12 +7,19 @@ model:
   cache_dir: /path/to/huggingface_cache
 
 data:
-  corpus_dir: /path/to/dapt/shards   # packed token shards
+  corpus_dir: /path/to/dapt/shards   # dir of *.jsonl(.gz) shards, one doc/line
+  text_field: text                 # field in each shard holding the raw text
   processed_dir: data/processed/dapt
   replay_fraction: 0.15            # replay mix interleaved at a stationary ratio
+  replay_dir: HuggingFaceFW/fineweb-edu  # general-text replay: HF hub id or local shard dir
+  replay_name: sample-10BT         # HF config name (omit for a local replay_dir)
+  replay_text_field: text          # field holding the raw text in replay records
   sequence_length: 4096
+  heldout_fraction: 0.01           # corpus slice reserved for perplexity eval
+  max_docs: null                   # cap docs tokenised (null = all); set small for smoke runs
 
 train:
+  seed: 0
   epochs: 1
   learning_rate: 2.0e-5
   lr_scheduler: cosine
@@ -22,6 +29,12 @@ train:
   gradient_checkpointing: true
   precision: bf16                  # fp8 once Transformer Engine is verified on Blackwell
   optimizer: adamw_8bit
+  logging_steps: 10
+  save_steps: 500
+  max_steps: null                  # cap training steps (null = full epoch); set ~20 for smoke runs
 
 output:
   dir: checkpoints/dapt
+
+eval:
+  batch_size: 4                    # held-out perplexity batch size
